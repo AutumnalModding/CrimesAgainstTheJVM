@@ -49,19 +49,21 @@ public class CrimesAgainstTheJVM implements ClientModInitializer {
 							try {
 								Class<?> clazz = RuntimeClassGenerator.generate(parsed);
 
-								try {
-									Constructor<?> constructor = clazz.getConstructor();
-									constructor.newInstance();
-								} catch (NoSuchMethodException exception) {
-									if (exception.getMessage().contains(".<init>")) {
-										client.player.sendMessage(Text.literal("Loaded class " + clazz.getSimpleName().formatted(Formatting.GREEN)), true);
+								if (clazz != null) {
+									try {
+										Constructor<?> constructor = clazz.getConstructor();
+										constructor.newInstance();
+									} catch (NoSuchMethodException exception) {
+										if (exception.getMessage().contains(".<init>")) {
+											client.player.sendMessage(Text.literal("Loaded class " + clazz.getSimpleName().formatted(Formatting.GREEN)), true);
+										}
+									} catch (VerifyError error) {
+										client.player.sendMessage(Text.literal("Invalid bytecode! Reason:").formatted(Formatting.RED));
+										client.player.sendMessage(Text.literal(error.getMessage()));
+									} catch (Throwable throwable) {
+										client.player.sendMessage(Text.literal("Execution failed! Reason: " + throwable.getClass().getCanonicalName() + ": " + throwable.getMessage()).formatted(Formatting.RED));
+										throwable.printStackTrace();
 									}
-								} catch (VerifyError error) {
-									client.player.sendMessage(Text.literal("Invalid bytecode! Reason:").formatted(Formatting.RED));
-									client.player.sendMessage(Text.literal(error.getMessage()));
-								} catch (Throwable throwable) {
-									client.player.sendMessage(Text.literal("Execution failed! Reason: " + throwable.getClass().getCanonicalName() + ": " + throwable.getMessage()).formatted(Formatting.RED));
-									throwable.printStackTrace();
 								}
 							} catch (Throwable throwable) {
 								client.player.sendMessage(Text.literal("Compilation failed! Reason: " + throwable.getClass().getCanonicalName() + ": " + throwable.getMessage()).formatted(Formatting.RED));

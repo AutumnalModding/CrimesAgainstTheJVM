@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import java.util.stream.Stream;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
@@ -20,6 +22,9 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodNode;
 
 public class RuntimeClassGenerator {
+    private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static Class<?> generate(String bytecode) {
         Stream<String> lines = bytecode.lines();
         InsnList instructions = new InsnList();
@@ -56,7 +61,7 @@ public class RuntimeClassGenerator {
             instructions.add(temp);
         }
 
-        ClassNode node = new ClassNode(Opcodes.ASM8);
+        ClassNode node = new ClassNode(Opcodes.ASM9);
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
 
         node.name = className.get();
@@ -91,6 +96,22 @@ public class RuntimeClassGenerator {
             }
         }
 
-        return CriminalClassloader.INSTANCE.load(node.name, writer.toByteArray());
+        try {
+            ClassWriter verify = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+            node.name = "xyz/lilyflower/catj/util/" + className.get();
+            node.accept(verify);
+
+            MethodHandles.Lookup lookup = LOOKUP.defineHiddenClass(verify.toByteArray(), false);
+            lookup.getClass(); // NOP: we want to trip the verifier
+        } catch (IllegalAccessException | VerifyError exception) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player != null) {
+                client.player.sendMessage(Text.literal("Invalid bytecode!").formatted(Formatting.RED));
+                client.player.sendMessage(Text.literal("Reason: " + exception.getMessage()).formatted(Formatting.RED));
+            }
+            return null;
+        }
+
+        return CriminalClassloader.INSTANCE.load(className.get(), writer.toByteArray());
     }
 }
