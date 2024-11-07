@@ -6,9 +6,6 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -53,7 +50,7 @@ public class RuntimeClassGenerator {
             } else if (!line.isBlank()) {
                 instructions.add(InstructionParser.parse(line));
             }
-        };
+        }
 
         if (entrypoint && superclass.equals("java/lang/Object")) {
             InsnList temp = new InsnList();
