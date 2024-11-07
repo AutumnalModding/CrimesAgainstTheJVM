@@ -1,7 +1,12 @@
 package xyz.lilyflower.catj;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import net.fabricmc.api.ClientModInitializer;
 
@@ -34,8 +39,14 @@ public class CrimesAgainstTheJVM implements ClientModInitializer {
 			"category.catj.catj"
 	));
 
-	@Override
+	@SuppressWarnings("ResultOfMethodCallIgnored")
+    @Override
 	public void onInitializeClient() {
+		File configDir = new File("config/catj/");
+		if (!configDir.exists()) {
+			configDir.mkdir();
+		}
+
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (client.player != null) {
 				while (EXECUTE.wasPressed()) {
@@ -44,31 +55,51 @@ public class CrimesAgainstTheJVM implements ClientModInitializer {
 						WrittenBookContentComponent content = stack.get(DataComponentTypes.WRITTEN_BOOK_CONTENT);
 
 						if ((content.author() != null && Objects.equals(content.author(), client.player.getName().getString())) || FabricLoader.getInstance().isDevelopmentEnvironment()) {
-							String parsed = BookParser.parse(stack);
+							String list = BookParser.parse(stack);
+							ArrayList<File> files = new ArrayList<>();
 
-							try {
-								Class<?> clazz = RuntimeClassGenerator.generate(parsed);
+							list.lines().forEach(line -> {
+								files.add(new File("config/catj/" + line));
+							});
 
-								if (clazz != null) {
+							for (File file : files) {
+                                try {
+                                    List<String> lines = Files.readAllLines(file.toPath());
+									StringBuilder parsed = new StringBuilder();
+									for (String line : lines) {
+										parsed.append(line).append("\n");
+									}
+
 									try {
-										Constructor<?> constructor = clazz.getConstructor();
-										constructor.newInstance();
-									} catch (NoSuchMethodException exception) {
-										if (exception.getMessage().contains(".<init>")) {
-											client.player.sendMessage(Text.literal("Loaded class " + clazz.getSimpleName().formatted(Formatting.GREEN)), true);
+										Class<?> clazz = RuntimeClassGenerator.generate(parsed.toString());
+
+										if (clazz != null) {
+											try {
+												Constructor<?> constructor = clazz.getConstructor();
+												constructor.newInstance();
+											} catch (NoSuchMethodException exception) {
+												if (exception.getMessage().contains(".<init>")) {
+													client.player.sendMessage(Text.literal("Loaded class " + clazz.getSimpleName().formatted(Formatting.GREEN)), true);
+												}
+											} catch (VerifyError error) {
+												client.player.sendMessage(Text.literal("Invalid bytecode! Reason:").formatted(Formatting.RED));
+												client.player.sendMessage(Text.literal(error.getMessage()));
+											} catch (Throwable throwable) {
+												client.player.sendMessage(Text.literal("Execution failed! Reason: " + throwable.getClass().getCanonicalName() + ": " + throwable.getMessage()).formatted(Formatting.RED));
+												throwable.printStackTrace();
+											}
 										}
-									} catch (VerifyError error) {
-										client.player.sendMessage(Text.literal("Invalid bytecode! Reason:").formatted(Formatting.RED));
-										client.player.sendMessage(Text.literal(error.getMessage()));
 									} catch (Throwable throwable) {
-										client.player.sendMessage(Text.literal("Execution failed! Reason: " + throwable.getClass().getCanonicalName() + ": " + throwable.getMessage()).formatted(Formatting.RED));
+										client.player.sendMessage(Text.literal("Compilation failed! Reason: " + throwable.getClass().getCanonicalName() + ": " + throwable.getMessage()).formatted(Formatting.RED));
 										throwable.printStackTrace();
 									}
-								}
-							} catch (Throwable throwable) {
-								client.player.sendMessage(Text.literal("Compilation failed! Reason: " + throwable.getClass().getCanonicalName() + ": " + throwable.getMessage()).formatted(Formatting.RED));
-								throwable.printStackTrace();
-							}
+
+                                } catch (IOException e) {
+									client.player.sendMessage(Text.literal("Could not read file " + file.getName() + " (does it exist?)."));
+                                }
+                            }
+
+
 						} else {
 							client.player.sendMessage(Text.literal("⚠").formatted(Formatting.DARK_RED).append(Text.literal(" WARNING ").formatted(Formatting.BOLD, Formatting.DARK_RED)).append(Text.literal("⚠").formatted(Formatting.DARK_RED)));
 							client.player.sendMessage(Text.literal("Your player entity did not write this book!").formatted(Formatting.RED));

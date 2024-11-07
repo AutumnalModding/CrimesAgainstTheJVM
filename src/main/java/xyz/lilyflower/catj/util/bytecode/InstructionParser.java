@@ -1,4 +1,4 @@
-package xyz.lilyflower.catj.util;
+package xyz.lilyflower.catj.util.bytecode;
 
 import java.lang.reflect.Field;
 import org.objectweb.asm.Opcodes;
@@ -60,39 +60,7 @@ public class InstructionParser {
                     }
 
                     case Opcodes.NEWARRAY: {
-                        switch (arguments) {
-                            case "I": {
-                                return new IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_INT);
-                            }
-
-                            case "B": {
-                                return new IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_BYTE);
-                            }
-
-                            case "C": {
-                                return new IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_CHAR);
-                            }
-
-                            case "F": {
-                                return new IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_FLOAT);
-                            }
-
-                            case "D": {
-                                return new IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_DOUBLE);
-                            }
-
-                            case "J": {
-                                return new IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_LONG);
-                            }
-
-                            case "S": {
-                                return new IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_SHORT);
-                            }
-
-                            case "Z": {
-                                return new IntInsnNode(Opcodes.NEWARRAY, Opcodes.T_BOOLEAN);
-                            }
-                        }
+                        return new IntInsnNode(opcode, parsePrimitiveType(arguments));
                     }
 
                     case Opcodes.BIPUSH:
@@ -134,5 +102,20 @@ public class InstructionParser {
         parsed[2] = description;
 
         return parsed;
+    }
+
+    private static int parsePrimitiveType(String type) {
+        return switch (type) {
+            case "I" -> Opcodes.T_INT;
+            case "B" -> Opcodes.T_BYTE;
+            case "C" -> Opcodes.T_CHAR;
+            case "F" -> Opcodes.T_FLOAT;
+            case "D" -> Opcodes.T_DOUBLE;
+            case "J" -> Opcodes.T_LONG;
+            case "S" -> Opcodes.T_SHORT;
+            case "Z" -> Opcodes.T_BOOLEAN;
+            default -> 0;
+        };
+
     }
 }

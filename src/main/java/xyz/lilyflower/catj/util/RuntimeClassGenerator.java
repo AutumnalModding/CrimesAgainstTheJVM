@@ -1,11 +1,9 @@
 package xyz.lilyflower.catj.util;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,6 +18,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodNode;
+import xyz.lilyflower.catj.util.bytecode.InstructionParser;
 
 public class RuntimeClassGenerator {
     private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
