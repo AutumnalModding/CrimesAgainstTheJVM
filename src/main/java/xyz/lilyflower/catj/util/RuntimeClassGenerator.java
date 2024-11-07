@@ -25,33 +25,37 @@ public class RuntimeClassGenerator {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public static Class<?> generate(String bytecode) {
-        Stream<String> lines = bytecode.lines();
+        String[] lines = bytecode.split("\n");
         InsnList instructions = new InsnList();
 
-        AtomicReference<String> className = new AtomicReference<>(UUID.randomUUID().toString());
-        AtomicReference<String> methodDesc = new AtomicReference<>("()V");
-        AtomicBoolean entrypoint = new AtomicBoolean(false);
+        String className = UUID.randomUUID().toString();
+        String methodDesc = "()V";
+        boolean entrypoint = false;
 
-        AtomicReference<String> superclass = new AtomicReference<>("java/lang/Object");
+        String superclass = "java/lang/Object";
         ArrayList<String> interfaces = new ArrayList<>();
 
-        lines.forEach(line -> {
+        for (String line : lines) {
             if (line.equals("ENTRYPOINT")) {
-                entrypoint.set(true);
+                entrypoint = true;
             } else if (line.startsWith("SUPER ")) {
-                superclass.set(line.replaceAll("SUPER ", ""));
+                superclass = line.replaceAll("SUPER ", "");
             } else if (line.startsWith("IFACE ")) {
                 interfaces.add(line.replaceAll("IFACE ", ""));
             } else if (line.startsWith("NAME ")) {
-                className.set(line.replaceAll("NAME ", ""));
+                className = line.replaceAll("NAME ", "");
+                if (CriminalClassloader.LOADED.containsKey(className)) {
+                    return CriminalClassloader.LOADED.get(className);
+                }
+
             } else if (line.startsWith("DESC ")) {
-                methodDesc.set(line.replaceAll("DESC ", ""));
+                methodDesc = line.replaceAll("DESC ", "");
             } else if (!line.isBlank()) {
                 instructions.add(InstructionParser.parse(line));
             }
-        });
+        };
 
-        if (entrypoint.get() && superclass.get().equals("java/lang/Object")) {
+        if (entrypoint && superclass.equals("java/lang/Object")) {
             InsnList temp = new InsnList();
             temp.add(InstructionParser.parse("ALOAD 0"));
             temp.add(InstructionParser.parse("INVOKESPECIAL java/lang/Object.<init>()V"));
@@ -63,16 +67,16 @@ public class RuntimeClassGenerator {
         ClassNode node = new ClassNode(Opcodes.ASM9);
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
 
-        node.name = className.get();
-        node.superName = superclass.get();
+        node.name = className;
+        node.superName = superclass;
         node.interfaces.addAll(interfaces);
 
         MethodNode method = new MethodNode();
         method.instructions = instructions;
-        method.name = entrypoint.get() ? "<init>" : "run";
-        method.desc = entrypoint.get() ? "()V" : methodDesc.get();
+        method.name = entrypoint ? "<init>" : "run";
+        method.desc = entrypoint ? "()V" : methodDesc;
         method.exceptions = new ArrayList<>();
-        method.access = entrypoint.get() ? Opcodes.ACC_PUBLIC : Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC;
+        method.access = entrypoint ? Opcodes.ACC_PUBLIC : Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC;
 
         node.methods.add(method);
         node.access = Opcodes.ACC_PUBLIC;
@@ -97,7 +101,7 @@ public class RuntimeClassGenerator {
 
         try {
             ClassWriter verify = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-            node.name = "xyz/lilyflower/catj/util/" + className.get();
+            node.name = "xyz/lilyflower/catj/util/" + className;
             node.accept(verify);
 
             MethodHandles.Lookup lookup = LOOKUP.defineHiddenClass(verify.toByteArray(), false);
@@ -111,6 +115,6 @@ public class RuntimeClassGenerator {
             return null;
         }
 
-        return CriminalClassloader.INSTANCE.load(className.get(), writer.toByteArray());
+        return CriminalClassloader.INSTANCE.load(className, writer.toByteArray());
     }
 }

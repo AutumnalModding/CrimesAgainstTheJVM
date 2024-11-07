@@ -4,7 +4,7 @@ import java.util.HashMap;
 import xyz.lilyflower.catj.CrimesAgainstTheJVM;
 
 public class CriminalClassloader extends ClassLoader {
-    private static final HashMap<String, Class<?>> LOADED = new HashMap<>();
+    static final HashMap<String, Class<?>> LOADED = new HashMap<>();
     public static final CriminalClassloader INSTANCE = new CriminalClassloader(CrimesAgainstTheJVM.class.getClassLoader());
 
     private CriminalClassloader(ClassLoader parent) {
